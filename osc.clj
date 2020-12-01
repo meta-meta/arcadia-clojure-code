@@ -1,8 +1,11 @@
 (ns osc
-  (:use [arcadia.core]))
+  (:use [arcadia.core])
+  (:import OscIn OscOut)
+  )
 
-(def osc-in (cmpt (object-named "OSC") "OscIn"))
-(def osc-out (cmpt (object-named "OSC") "OscOut"))
+
+(def osc-in (cmpt (object-named "OSC") OscIn))
+(def osc-out (cmpt (object-named "OSC") OscOut))
 
 (. osc-in (Open 7000 ""))
 (. osc-out (Open 8000 "127.0.0.1"))

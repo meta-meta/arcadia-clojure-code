@@ -9,7 +9,7 @@
         [clojure.pprint])
   (:import
     OVRInput
-    (SpaceNavigatorDriver Settings SpaceNavigator)
+;    (SpaceNavigatorDriver Settings SpaceNavigator)
     (UnityEngine ForceMode Input KeyCode Quaternion Rigidbody Time Vector3)))
 
 (def ovr-consts
@@ -105,9 +105,9 @@
 
 
 ; TODO find me a better home
-(SpaceNavigator/SetRotationSensitivity 1)
-(SpaceNavigator/SetTranslationSensitivity 0.5)
-(set! Settings/RuntimeEditorNav false)
+;(SpaceNavigator/SetRotationSensitivity 1)
+;(SpaceNavigator/SetTranslationSensitivity 0.5)
+;(set! Settings/RuntimeEditorNav false)
 
 ; Make sure "Filter Duplicates" is unchecked in OscIn component
 
@@ -154,10 +154,10 @@
   (def airship-prop-ring (object-named "airship-prop-ring"))
   (def airship-prop (object-named "airship-prop"))
   (def airship (object-named "Airship"))
-  (def avatar (object-named "MyAvatar"))
+  ;(def avatar (object-named "MyAvatar"))
   (def handlebar (object-named "Handlebar"))
 
-  (def freewheel (object-named "Cube"))
+  (def freewheel (object-named "Freewheel"))
   (def freewheel-body (cmpt freewheel Rigidbody))
 
   (def airship-body (cmpt airship Rigidbody))
@@ -302,7 +302,7 @@
 (o/listen "/bcr-2000/knobs" (fn [osc-msg] (on-midi-evt :bcr-2000 :knobs osc-msg)))
 (o/listen "/acoustic-pitch/note" (fn [osc-msg] (on-pitch-evt :acoustic-pitch osc-msg)))
 
-;(o/listen "/bike" (fn [osc-msg] (on-bike-evt osc-msg)))
+(o/listen "/bike" (fn [osc-msg] (on-bike-evt osc-msg)))
 
 (defn listen
   "registers a listener for instrument events. listener must accept args: midi-evt index val"
