@@ -1,17 +1,9 @@
-
-
-
-
-
-
-
-
 (ns music-notation
   (use arcadia.core
        arcadia.linear
        clojure.set)
   (:use [music-glyphs :only [glyphs]])
-  (:import (UnityEngine Color GameObject Mesh MeshFilter MeshRenderer Mathf TextMesh Vector2 Vector3))
+  (:import (UnityEngine Color GameObject Mesh MeshFilter MeshRenderer Mathf Resources TextMesh Vector2 Vector3))
   )
 
 (def lexicon "examples and definitions of terms used"
@@ -276,15 +268,19 @@
          [category]
          #{}))
 
+(def container (GameObject. "Notation"))
+(def glyph-template (Resources/Load "GlyphTemplate"))
+
 (defn- +glyph
   "creates a glyph at (x,y,0). returns the GameObject"
   [glyph x y]
-  (let [go (instantiate (object-named "GlyphTemplate"))
+  (let [go (instantiate glyph-template)
         tm (cmpt go TextMesh)
         dx 1 ;smallest unit in x-dimension for rendering glyphs
         dy 0.25 ;smallest unit in y-dimension for rendering glyphs
         ]
-    (set! (.. go transform position) (v3 (* x dx)
+    (child+ container go)
+    (set! (.. go transform localPosition) (v3 (* x dx)
                                          (* y dy) ;center on middle c = 0
                                          0))
     (set! (. go name) (str glyph))
@@ -415,7 +411,7 @@
                              accidental "-"
                              (when dotted "o")))
         ]
-    (set! (.. go transform position) (v3 x 0 1)) ; not setting y here because this is grid-y. actual translation y is calculated in +glyph based on dY. TODO: formalize distinction between grid x,y and translation x,y,z
+    (set! (.. go transform localPosition) (v3 x 0 1)) ; not setting y here because this is grid-y. actual translation y is calculated in +glyph based on dY. TODO: formalize distinction between grid x,y and translation x,y,z
     (doseq [glyph-go (filter identity (flatten glyph-gos))]
       (child+ go glyph-go true))
     (game-objects+ category go)
