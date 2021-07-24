@@ -7,8 +7,8 @@
 (def osc-in (cmpt (object-named "OSC") OscIn))
 (def osc-out (cmpt (object-named "OSC") OscOut))
 
-(. osc-in (Open 7000 ""))
-(. osc-out (Open 8000 "127.0.0.1"))
+;; (. osc-in (Open 7000 ""))
+;; (. osc-out (Open 8000 "127.0.0.1"))
 
 (defn send [addr msg]
   (let [msg (cond
@@ -22,6 +22,9 @@
   "registers fn as a listener for OSC msgs at addr. fn will be invoked with a single argument of type OscMessage"
   [addr fn]
   (. osc-in (Map addr fn)))
+
+; TODO
+;; (defn unlisten  "unregisters fn as listener")
 
 (comment
   (send "/organ" [60 0])

@@ -15,7 +15,34 @@
 
 
 
-(defn- move-bike []
+(defn- update-scene [obj key] 
+  (let [
+          vel (* 100 (.. freewheel-body angularVelocity magnitude))
+          angle (Vector3/SignedAngle
+                  (.. handlebar transform forward)
+                  (.. airship transform forward)
+                  Vector3/up)
+         
+          ]
+      
+      ;; rotate the prop
+      (.Rotate (.. airship-prop transform)
+               0
+               0
+               (* (Time/deltaTime)
+                  1
+                  vel))
+
+      ;; rotate prop assembly according to handlebar
+      (set! (.. airship-prop-ring transform localRotation)
+            (euler (v3 0 angle 0)))
+
+      
+      )
+
+)
+
+(defn- update-physics [obj key]
 
     (let [
           vel (* 100 (.. freewheel-body angularVelocity magnitude))
@@ -30,19 +57,7 @@
                        ))
           ]
       
-
-      ;; rotate the prop
-      (.Rotate (.. airship-prop transform)
-               0
-               0
-               (* (Time/deltaTime)
-                  1
-                  vel))
-
-      ;; rotate prop assembly according to handlebar
-      (set! (.. airship-prop-ring transform localRotation)
-            (euler (v3 0 angle 0)))
-
+     
       ;; move airship forward
       (.AddRelativeForce airship-body
                          (v3*
@@ -81,7 +96,7 @@
                             )
                           ForceMode/Acceleration)
 
-      )
+      ) 
 
     )
 
@@ -98,20 +113,9 @@
   (move-freewheel pulse)
   )
 
-
-
-
-;(sys-action [Int32] [x] (log x))
-;(clojure.repl/doc sys-action)
-;; (. o/osc-in (MapInt "/bike" (sys-action [Int32] [x] (log x))))
 (. o/osc-in (MapInt "/bike" #'on-bike-pulse))
 
-;(o/listen "/bike" #'on-bike-evt)
-;(o/listen "/bike" (fn [osc-msg] (log "12345")))
 
-(defn poll [obj key]
-  (move-bike)
-)
 
-;(hook+ (object-named "App") :update #'poll)
-(hook+ (object-named "App") :fixed-update :poll-app #'poll)
+(hook+ (object-named "App") :update :update-scene #'update-scene)
+(hook+ (object-named "App") :fixed-update :update-physics #'update-physics)

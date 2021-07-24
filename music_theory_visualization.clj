@@ -1,9 +1,12 @@
 (ns music-theory-visualization
+  (:require [osc :as o] ovr)
   (:use [arcadia.core]
         [arcadia.introspection]
         [arcadia.linear]
-        [controllers-state :only [get-notes listen]])
+;        [controllers-state :only [get-notes listen]]
+        )
   (:import (UnityEngine Color GameObject LineRenderer Material Mathf Renderer Resources Vector3)))
+
 
 (def mats (->> (range 12)
                (map (fn [n] [n (Resources/Load (str "n" n))]))
@@ -108,6 +111,8 @@
            #(.. % (SetActive false))
            interval-lines)))
 
+(disable-interval-lines)
+
 (def curr-notes (atom '()))
 
 (defn- update-intervals []
@@ -135,25 +140,40 @@
                           )))))
         ))))
 
-(defn- on-evt [device-name evt index val]
-  (cond (= evt :notes)
-        (let [go (spiral (keyword (str "note-" index)))
-              scale (note->scale index)]
-          (set! (.. go transform localScale)
-                (v3 (* scale
-                       (Mathf/Lerp
-                         (if (= 0 val) 0.1 note-size-min)
-                         note-size-max
-                         (/ val 128)))))
-          (update-intervals)
-          )))
+(defn- on-evt [index val]
+  (let [go (spiral (keyword (str "note-" index)))
+        scale (note->scale index)]
+    (set! (.. go transform localScale)
+          (v3 (* scale
+                 (Mathf/Lerp
+                  (if (= 0 val) 0.1 note-size-min)
+                  note-size-max
+                  (/ val 128)))))
+                                        ;(update-intervals)
+    ))
 
-(defn- on-midi-evt [device-name]
+#_(defn- on-midi-evt [device-name]
   (fn [evt index val]
     (on-evt device-name evt index val)))
 
+
+(defn- on-midi-evt [osc-msg]
+  (let [[index val] (vec (. osc-msg (get_args)))
+        ]
+    #_(swap! app/s assoc-in [:controllers instrument event index] val)
+    (on-evt index val)  
+    ))
+
+(o/listen "/midi" #'on-midi-evt)
+
+(defn on-num [n] (log n))
+
+(. o/osc-in (MapInt "/num" #'on-num))
+
+;(. o/osc-in (MapInt "/bike" #'on-bike-pulse))
+
 ;(listen :keystation #'on-keystation-evt)
-(listen :keystation (on-midi-evt :keystation))
+;(listen :keystation (on-midi-evt :keystation))
 
 (defn on-acoustic-pitch [[note vel]]
   ;(.SetColor ac-pitch-mat "_Color"                          ;slows down too much. try Color.Lerp?
