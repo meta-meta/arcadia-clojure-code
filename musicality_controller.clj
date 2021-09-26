@@ -8,6 +8,8 @@
   (:import NotePad)
   (:import Tonnetz))
 
+
+
 (defn init [app-obj role-key]
   (log "MusicalityController init")
   (create-primitive :cube)
@@ -89,27 +91,49 @@
   (.. note-obj transform
       (LookAt (.. (:lattice-obj (state app :lattice)) transform))))
 
+(defn point-on-arc [vert-count r fov vert]
+  (let [d-theta (/ fov vert-count)
+        progress (- vert  (Mathf/Floor (/ vert-count 2)))
+        theta (* progress d-theta)]
+    (->> [(* -1 (Mathf/Sin theta)) (* -1 (Mathf/Cos theta))]
+         (map #(* r %)))))
+
 (defn fretted-inst
   [& {:keys [fret-count fret-markers tuning]
       :or {fret-count 24
            fret-markers [3 5 7 9 12 15 17 19 21]
-           tuning (->> [4 9 2 7 11 4]
+           tuning (->> [4 11 7 2 9 4]
                        (map #(+ % 36)))}} ]
   (->> tuning
        (map-indexed
         (fn [string-idx note-num-0]
           (->> (range (+ 1 fret-count))
                (map (fn [fret]
-                      (let [note-num (+ fret note-num-0)]
+                      (let [note-num (+ fret note-num-0)
+                            string-count (count tuning)
+                            [x z0] (point-on-arc 
+                                    fret-count
+                                    0.5 
+                                    (* (/ fret-count 24)
+                                       5/4
+                                       Mathf/PI)
+                                    fret)
+                            [y z1] (point-on-arc 
+                                    string-count
+                                    0.5
+                                    (* (/ string-count 6)
+                                       5/16
+                                       Mathf/PI)
+                                    string-idx)]
                         (->> (note+ note-num)
-                             (mv-note (- 1 (* 0.1 fret))
-                                      (* 0.1 string-idx)
-                                      -1)))))
+                             (mv-note x
+                                      y
+                                      (+ z0 (* 1/2 z1)))))))
                (doall))))
        (doall)))
 
-#_(fretted-inst)
-
+#_(fretted-inst :fret-count 24)
+#_(fretted-inst :fret-count 12 :tuning [9 4 0 7])
 
 #_(clear-notes)
 
