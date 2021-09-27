@@ -4,7 +4,7 @@
         [arcadia.introspection]
         [clojure.set]
         )
-  (:import (UnityEngine Color GameObject LineRenderer Material Mathf Renderer Resources Vector3))
+  (:import (UnityEngine Color GameObject LineRenderer Material Mathf Renderer Resources TextMesh Vector3))
   (:import NotePad)
   (:import Tonnetz))
 
@@ -102,15 +102,18 @@
   [& {:keys [fret-count fret-markers tuning]
       :or {fret-count 24
            fret-markers [3 5 7 9 12 15 17 19 21]
-           tuning (->> [4 11 7 2 9 4]
-                       (map #(+ % 36)))}} ]
+           tuning [40 45 50 55 59 64]}} ]
   (->> tuning
+       (reverse) ;go from +y to -y but tuning comes in lowest string first
        (map-indexed
         (fn [string-idx note-num-0]
-          (->> (range (+ 1 fret-count))
+          (->> (range (+ 1 ; 0th fret
+                         fret-count))
                (map (fn [fret]
                       (let [note-num (+ fret note-num-0)
                             string-count (count tuning)
+
+                            ; get the curve component from +x to -x (left to right)
                             [x z0] (point-on-arc 
                                     fret-count
                                     0.5 
@@ -118,6 +121,8 @@
                                        5/4
                                        Mathf/PI)
                                     fret)
+
+                            ; get the curve component from -y to y
                             [y z1] (point-on-arc 
                                     string-count
                                     0.5
@@ -133,10 +138,33 @@
        (doall)))
 
 #_(fretted-inst :fret-count 24)
-#_(fretted-inst :fret-count 12 :tuning [9 4 0 7])
+#_(fretted-inst :fret-count 12 :tuning [67 60 64 69])
 
 #_(clear-notes)
 
 
+(defn mk-memo [msg]
+  ;; todo title
+  ;; todo timestamp
+  ;; todo: join varargs msg strs with \n
+  ;; todo: auto-resize to text
+  (let [obj (instantiate (Resources/Load (str "Prefabs/Memo")))]
+    (set! (.. obj name) "memo")
+    (with-cmpt (gobj
+                (.. obj transform (Find "Label")))
+      [tm TextMesh]
+      (set! (.. tm text) msg))
+    ))
+
+#_(mk-memo "Hi I'm just a memo.\nI have length.\nThis a new line.")
 
 
+(comment "TODO" "
+* use memo prefab as base for number picker
+* highlight notepads
+* add ways to mask off chords, temp change mallet to paddle for strumming
+* save scene
+* execute fn upon receiving fn-name over osc
+"
+
+)
