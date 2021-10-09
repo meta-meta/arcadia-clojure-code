@@ -4,7 +4,22 @@
         [arcadia.introspection]
         [clojure.set]
         )
-  (:import (UnityEngine Color GameObject LineRenderer Material Mathf Renderer Resources TextMesh Vector3))
+  (:import (UnityEngine
+            CapsuleCollider
+            Collider
+            Color
+            ConfigurableJoint
+            GameObject
+            LineRenderer
+            Material
+            Mathf
+            Renderer
+            Resources
+            Rigidbody
+            SphereCollider
+            TextMesh
+            Vector3))
+  (:import Manipulate)
   (:import NotePad)
   (:import Tonnetz))
 
@@ -29,9 +44,9 @@
 #_(update-state app :lattice assoc :notes-mod12 {})
 #_(update-state app :lattice assoc-in [:notes :1] #{})
 
-(defn note+ "adds a note egg to the lattice; returns note-obj"
-  [note-num]
-  (let [{:keys [:lattice-obj :notes :notes-mod12]} (state app :lattice)
+
+(defn mk-note [note-num] "instantiates a note egg"
+  (let [{:keys [:lattice-obj]} (state app :lattice)
         note-obj (with-cmpt lattice-obj [tn Tonnetz]
                    (instantiate (.. tn prefab)))]
     ;; set obj name
@@ -48,7 +63,15 @@
     (with-cmpt note-obj [np NotePad]
       (set! (.. np oscAddr) "/lattice")
       (set! (.. np note) note-num))
+   
+    note-obj
+    ))
 
+(defn note+ "adds a note egg to the lattice; returns note-obj"
+  [note-num]
+  (let [{:keys [:lattice-obj :notes :notes-mod12]} (state app :lattice)
+        note-obj (mk-note note-num)]
+   
     ;; set as child of lattice-obj
     (child+ lattice-obj note-obj)
 
@@ -139,6 +162,7 @@
 
 #_(fretted-inst :fret-count 24)
 #_(fretted-inst :fret-count 12 :tuning [67 60 64 69])
+#_(fretted-inst :fret-count 12 :tuning [40 45 50 55 60])
 
 #_(clear-notes)
 
@@ -168,3 +192,218 @@
 "
 
 )
+
+
+(defn mv-obj-in-front-cam
+  "Moves gobj dist units in front of the MainCamera"
+  ([dist gobj]
+   (let [tr-cam (. Camera/main transform)]
+     (set! (.. gobj transform position)
+           (v3+ (. tr-cam position) 
+                (v3* (. tr-cam forward) dist))))
+   gobj)
+  ([gobj] (mv-obj-in-front-cam 0.5 gobj)))
+
+
+(defmacro set-props
+  "takes a component and an alternating list of key val key val. sets cmpt.key = val"
+  [cmpt & key-val-pairs]
+  (cons
+    'do
+    (->> (partition 2 key-val-pairs)
+         (map (fn [[key val]] (list 'set! (list '.. cmpt key) val)))))
+  )
+
+(defn- link-objs [gobj gobj-conn anchor anchor-conn]
+  (let [joint (ensure-cmpt gobj ConfigurableJoint)
+        rigidbody-conn (cmpt gobj-conn Rigidbody)]
+    
+    (set-props joint
+               connectedBody rigidbody-conn
+               anchor anchor
+               xMotion ConfigurableJointMotion/Locked
+               yMotion ConfigurableJointMotion/Locked
+               zMotion ConfigurableJointMotion/Locked
+               autoConfigureConnectedAnchor false
+               connectedAnchor anchor-conn))
+  gobj)
+
+(defn rigidbody+ [mass drag angularDrag useGravity gobj]
+  (with-cmpt gobj [rb Rigidbody]
+      (set-props rb
+                 mass (float mass)
+                 drag (float drag)
+                 angularDrag (float angularDrag)
+                 useGravity useGravity))
+  gobj)
+
+(defn mk-chain
+  "makes a chain of gobjs, returns the tail gobj"
+  [link-count gobj-create-fn gobj-conn]
+  (if (> link-count 0)
+    (let [gobj (gobj-create-fn)]
+      ;; move next link into place
+      (set! (.. gobj transform position)
+            (v3- (.. gobj-conn transform position)
+                 (v3 0
+                     (+ (* 0.5 (.. gobj transform localScale y))
+                        (* 0.5 (.. gobj-conn transform localScale y)))
+                     0)))
+      
+      ;; link to previous link
+      (link-objs gobj gobj-conn (v3 0 0.5 0) (v3 0 -0.5 0))
+      ;; make next link
+      (mk-chain (- link-count 1) gobj-create-fn gobj))
+    gobj-conn))
+
+(defn mk-link 
+  ([mass r]
+   (let [gobj (create-primitive :sphere "link")]
+     (with-cmpt gobj [sc SphereCollider]
+       (set! (.. gobj transform localScale) (v3 r)))
+     (rigidbody+ mass 0.1 0.1 false gobj)
+     gobj))
+  ([r] (mk-link 0.25 r)))
+
+(defn mk-root
+  ([r pos]
+   (let [gobj (mk-link r)]
+     (set! (.. gobj name) "root")
+     (set! (.. gobj transform localPosition) pos)
+     (with-cmpt gobj [rigidbody Rigidbody]
+       (set! (.. rigidbody isKinematic) true))
+     gobj))
+  ([r] (mk-root r (v3))))
+
+
+
+(defn mk-chime [note-num]
+  (let [gobj (mk-note note-num)]
+
+  ;; setup note
+  (set! (.. gobj transform localScale) (v3 0.05))
+  (cmpt- gobj CapsuleCollider)
+  (with-cmpt gobj [sc SphereCollider]
+    (set! (.. sc isTrigger) false))
+  
+  gobj))
+
+
+(defn manipulate+ [gobj]
+  (ensure-cmpt gobj Manipulate)
+  (with-cmpt gobj [col Collider]
+    (set! (.. col isTrigger) true))
+  gobj)
+
+(defn grav+ 
+  ([mass drag gobj]
+   (with-cmpt gobj [rb Rigidbody]
+     (set-props rb
+                mass mass
+                useGravity true
+                drag drag))
+   gobj)
+  ([mass gobj] (grav+ mass 10 gobj))
+  ([gobj] (grav+ 1 gobj)))
+
+
+
+(defn mk-hanging-chain
+  ([link-count root]
+   {:root root
+    :tail (->> root
+               (manipulate+)
+               (mv-obj-in-front-cam)
+               (mk-chain link-count #(mk-link 0.008))
+               )})
+  ([link-count] (mk-hanging-chain
+                 link-count
+                 (mk-root 0.025 (v3)))))
+
+(defn mk-hanging-chime
+  ([link-count chime-mass note-num root]
+
+   (let [tail (->> (mk-hanging-chain link-count root)
+                   (:tail)
+                   (mk-chain 1 #(mk-chime note-num))
+                   (grav+ chime-mass))]
+     {:root root
+      :tail tail}))
+  ([link-count chime-mass note-num]
+   (mk-hanging-chime link-count
+                     chime-mass
+                     note-num
+                     (mk-root 0.025 (v3)))))
+
+
+
+(comment
+  (def handle (->> (mk-root 0.05)
+                   (manipulate+)
+                   (mv-obj-in-front-cam)))
+
+
+
+  (def chime0
+    (->> (mk-hanging-chain 12)
+         (:tail)
+         (mk-hanging-chime 2 0.2 0)
+         (:tail)
+         (mk-hanging-chain 12)
+         (:tail)
+         (mk-chain 1 #(->> (mk-root 0.01)
+                           (manipulate+)
+                           ))))
+
+
+  (mk-hanging-chime 10 0.2 96)
+
+
+  (def chime1
+    (mk-hanging-chime 10 0.2 60))
+
+  (def chime2
+    (mk-hanging-chime 10 0.2 67))
+
+  (def chime3
+    (mk-hanging-chime 10 0.2 71))
+
+  (def chime4
+    (mk-hanging-chime 10 0.2 72))
+
+  (def chime5
+    (mk-hanging-chime 17 0.2 74))
+
+  (def chime6
+    (mk-hanging-chime 17 0.2 70))
+
+  (def chime7
+    (mk-hanging-chime 17 0.2 80))
+
+  #_(child+ handle (:root chime0) true)
+  #_(child+ handle (:tail chime0) true)
+  (child+ handle (:root chime1) true)
+  (child+ handle (:root chime2) true)
+  (child+ handle (:root chime3) true)
+  (child+ handle (:root chime4) true)
+  (child+ handle (:root chime5) true)
+  (child+ handle (:root chime6) true)
+  (child+ handle (:root chime7) true))
+
+
+(comment
+
+;; TODO:
+
+#_(mv-on-arc [n radius subdivisions fov up-vec gobj])
+#_(mv-by [vec gobj])
+#_(mv-to [vec gobj])
+
+#_(spcnav-raycast-mouse-mode [])
+#_(spcnav-inertial-ship-mode [])
+
+)
+
+
+
+
