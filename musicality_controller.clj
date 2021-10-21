@@ -160,11 +160,7 @@
                (doall))))
        (doall)))
 
-#_(fretted-inst :fret-count 24)
-#_(fretted-inst :fret-count 12 :tuning [67 60 64 69])
-#_(fretted-inst :fret-count 12 :tuning [40 45 50 55 60])
 
-#_(clear-notes)
 
 
 (defn mk-memo [msg]
@@ -388,7 +384,70 @@
   (child+ handle (:root chime4) true)
   (child+ handle (:root chime5) true)
   (child+ handle (:root chime6) true)
-  (child+ handle (:root chime7) true))
+  (child+ handle (:root chime7) true)
+)
+
+#_(clojure.repl/doc mk-hanging-chime)
+
+
+(defn mk-chord-chime [chord-notes]
+  (->> chord-notes
+     (map (fn [note-num]
+            (let [[x z] (point-on-arc 
+                         12
+                         0.3
+                         (* 2 Mathf/PI)
+                         (mod note-num 12))
+                    
+                  chime (mk-hanging-chime 10 0.2 note-num)]
+
+              #_(child+ handle (:root chime) true)
+              
+              )
+            ))
+     (doall)
+     )
+)
+
+
+
+(comment " Misty
+
+૪.7.2.....૪010000૪730....78037૪૪૪8૪..8
+7..8૪3..5780.02.3.5.7...........૪.7.
+
+"
+
+(mk-chord-chime [63 67 70 74]) ;EbMaj7
+
+(mk-chord-chime [58 61 65 68]) ;Bbmin7
+(mk-chord-chime [63 67 70 73]) ;Eb7
+
+(mk-chord-chime [56 60 63 67]) ;Abmaj7
+
+(mk-chord-chime [56 59 63 67]) ;Abmin7
+(mk-chord-chime [61 64 68 71]) ;Db7
+
+(mk-chord-chime [63 67 70 74]) ;EbMaj7
+(mk-chord-chime [60 63 67 70]) ;Cmin7
+
+(mk-chord-chime [53 56 60 63]) ;Fmin7
+(mk-chord-chime [58 62 65 68]) ;Bb7
+
+(mk-chord-chime [55 59 62 66]) ;Gmaj7
+(mk-chord-chime [60 64 67 70]) ;C7
+
+(mk-chord-chime [53 57 60 64]) ;Fmaj7
+(mk-chord-chime [58 62 65 68]) ;Bb7
+)
+
+
+#_(fretted-inst :fret-count 24)
+#_(fretted-inst :fret-count 12 :tuning [67 60 64 69])
+#_(fretted-inst :fret-count 12 :tuning [40 45 50 55 60])
+#_(fretted-inst :fret-count 12 :tuning [36 43 50 57 64 71 78])
+
+#_(clear-notes)
 
 
 (comment
