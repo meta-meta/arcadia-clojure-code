@@ -17,17 +17,21 @@
             Resources
             Rigidbody
             SphereCollider
-            TextMesh
+            TextMesh            
             Vector3))
   (:import Manipulate)
   (:import NotePad)
-  (:import Tonnetz))
+  (:import Tonnetz)
+  (:import (uWindowCapture
+            UwcWindowTexture
+            WindowTextureScaleControlType)))
 
 
 
 (defn init [app-obj role-key]
   (log "MusicalityController init")
-  (create-primitive :cube)
+  (set! (.. (create-primitive :cube) transform localScale)
+        (v3 0.1))
   (state+ app-obj :lattice
           {:lattice-obj (object-named "Lattice")
            :notes {}
@@ -39,6 +43,8 @@
 
 #_(hook (object-named "App") :start :init)
 
+
+#_(clojure.pprint/pprint (state app :lattice))
 #_(state app :lattice)
 #_(update-state app :lattice assoc :notes {})
 #_(update-state app :lattice assoc :notes-mod12 {})
@@ -464,5 +470,15 @@
 )
 
 
+;; TODO: instantiate these objects at runtime
+(defn set-uwc-scale-control [obj-name]
+  (with-cmpt (object-named obj-name)
+    [win-tex UwcWindowTexture]
+    (set! (..  win-tex scaleControlType)
+          WindowTextureScaleControlType/Manual)))
+
+#_(set-uwc-scale-control "REPL")
+#_(set-uwc-scale-control "Emacs")
 
 
+(Mathf/Floor (/ (- 64 60) 12))
