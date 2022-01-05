@@ -1,5 +1,5 @@
 (ns music-theory-visualization
-  (:require [osc :as o] ovr)
+ ; (:require [osc :as o] ovr)
   (:use [arcadia.core]
         [arcadia.introspection]
         [arcadia.linear]
@@ -39,8 +39,11 @@
            note-size-max
            (/ vel 128)))))
 
+(def n-min 21)
+(def n-max 109)
+
 (def spiral
-  (->> (range 21 109)
+  (->> (range n-min n-max)
        (map (fn [n] (let [pos (mod n 12)
                           localPosition (note->spiral-position n)
                           localScale (note->spiral-localScale n 0)
@@ -115,9 +118,8 @@
 
 (def curr-notes (atom '()))
 
-(defn- update-intervals []
-  (let [notes (get-notes :keystation)
-        sorted-notes (->> notes
+(defn- update-intervals [notes]
+  (let [sorted-notes (->> notes
                           (map first)
                           (sort))]
     (when (not= @curr-notes sorted-notes)
@@ -140,6 +142,8 @@
                           )))))
         ))))
 
+
+
 (defn- on-evt [index val]
   (let [go (spiral (keyword (str "note-" index)))
         scale (note->scale index)]
@@ -152,23 +156,39 @@
                                         ;(update-intervals)
     ))
 
+
+(defn set-viz [note-map]
+  (update-intervals note-map)
+  (->> (range n-min n-max)
+       (map #(on-evt % 0))
+       (doall))
+  (->> note-map
+       (map (fn [[n v]] (on-evt n v)))
+       (doall)))
+
+
+#_(set-viz {30 60, 34 60, 37 60})
+#_(set-viz {36 127, 39 64, 43 90, 46 80, 48 50})
+
+
+
 #_(defn- on-midi-evt [device-name]
   (fn [evt index val]
     (on-evt device-name evt index val)))
 
 
-(defn- on-midi-evt [osc-msg]
+#_(defn- on-midi-evt [osc-msg]
   (let [[index val] (vec (. osc-msg (get_args)))
         ]
     #_(swap! app/s assoc-in [:controllers instrument event index] val)
     (on-evt index val)  
     ))
 
-(o/listen "/midi" #'on-midi-evt)
+#_(o/listen "/midi" #'on-midi-evt)
 
 (defn on-num [n] (log n))
 
-(. o/osc-in (MapInt "/num" #'on-num))
+#_(. o/osc-in (MapInt "/num" #'on-num))
 
 ;(. o/osc-in (MapInt "/bike" #'on-bike-pulse))
 
@@ -185,5 +205,9 @@
           Vector3/zero
           (note->spiral-localScale note vel))))
 
-(listen :acoustic-pitch #'on-acoustic-pitch)
+#_(on-acoustic-pitch [30 60])
+
+
+
+#_(listen :acoustic-pitch #'on-acoustic-pitch)
 ;(listen :a-300 (on-midi-evt :a-300))
