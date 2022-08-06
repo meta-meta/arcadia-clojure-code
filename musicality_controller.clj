@@ -176,11 +176,23 @@
   ;; todo: auto-resize to text
   (let [obj (instantiate (Resources/Load (str "Prefabs/Memo")))]
     (set! (.. obj name) "memo")
+    (mv-obj-in-front-cam obj)
     (with-cmpt (gobj
                 (.. obj transform (Find "Label")))
       [tm TextMesh]
       (set! (.. tm text) msg))
     ))
+
+(defn mk-soccer-ball []
+  (let [obj (instantiate (Resources/Load "Prefabs/SoccerBall"))]
+    (mv-obj-in-front-cam obj)))
+
+(defn mk-golf-ball []
+  (let [obj (instantiate (Resources/Load "Prefabs/GolfBall"))]
+    (mv-obj-in-front-cam obj)))
+
+#_(mk-soccer-ball)
+#_(mk-golf-ball)
 
 #_(mk-memo "Hi I'm just a memo.\nI have length.\nThis a new line.")
 
@@ -481,4 +493,20 @@
 #_(set-uwc-scale-control "Emacs")
 
 
-(Mathf/Floor (/ (- 64 60) 12))
+
+(comment "TODO: add picks/pointers/mallets to fingertips"
+         (let [hands (object-named "GhostHands")
+               find-fingertips (fn [hand]
+                                 (->> (descendents hand)
+                                      (filter #(clojure.string/ends-with? (.  % name) "_end") )
+                                      ))
+               [left-hand right-hand] (children hands)
+               left-fingertips (find-fingertips left-hand)
+               right-fingertips (find-fingertips right-hand)
+               ]
+
+           (clojure.pprint/pprint
+            left-fingertips)   
+
+           ))
+
